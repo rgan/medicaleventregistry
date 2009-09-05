@@ -1,0 +1,154 @@
+<project name="medicaleventregistry" default="datanucleusenhance">
+    <property file="build.properties"/>
+    <property name="build.dir" location="build"/>
+
+    <import file="${sdk.dir}/config/user/ant-macros.xml"/>
+
+    <path id="project.classpath">
+        <pathelement path="war/WEB-INF/classes"/>
+        <fileset dir="war/WEB-INF/lib">
+            <include name="**/*.jar"/>
+        </fileset>
+        <fileset dir="${sdk.dir}/lib">
+            <include name="shared/**/*.jar"/>
+        </fileset>
+    </path>
+
+    <path id="test.classpath">
+        <pathelement path="${build.dir}/test-classes"/>
+        <fileset dir="lib/test">
+            <include name="*.jar"/>
+        </fileset>
+        <fileset dir="${sdk.dir}/lib">
+            <include name="impl/*.jar"/>
+        </fileset>
+    </path>
+
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+        <delete dir="war/WEB-INF/lib"/>
+        <delete dir="war/WEB-INF/classes"/>
+    </target>
+
+    <target name="copyjars"
+            description="Copies the required JARs to the WAR.">
+        <mkdir dir="war/WEB-INF/lib"/>
+        <copy
+                todir="war/WEB-INF/lib"
+                flatten="true">
+            <fileset dir="${sdk.dir}/lib/user">
+                <include name="**/*.jar"/>
+            </fileset>
+            <fileset dir="lib">
+                <include name="**/*.jar"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="compile" depends="copyjars"
+            description="Compiles Java source and copies other source files to the WAR.">
+        <mkdir dir="war/WEB-INF/classes"/>
+        <copy todir="war/WEB-INF/classes">
+            <fileset dir="src">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+        <javac
+                srcdir="src"
+                destdir="war/WEB-INF/classes"
+                classpathref="project.classpath"
+                debug="on"/>
+    </target>
+
+    <target name="compile-test" depends="compile"
+            description="Compiles test source.">
+        <mkdir dir="${build.dir}/test-classes"/>
+        <copy todir="${build.dir}/test-classes">
+            <fileset dir="unit-tests">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+        <javac
+                srcdir="unit-tests"
+                destdir="${build.dir}/test-classes"
+                debug="on">
+            <classpath>
+                <path refid="project.classpath"/>
+                <path refid="test.classpath"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="unit-tests" depends="clean, compile-test,datanucleusenhance"
+            description="Compiles sources and runs tests.">
+        <mkdir dir="${build.dir}/reports"/>
+        <junit failureproperty="tests.have.failed" errorproperty="tests.have.failed"
+               fork="yes" forkmode="perBatch" dir="${basedir}">
+            <formatter usefile="false" type="brief"/>
+            <formatter usefile="true" type="xml"/>
+            <batchtest fork="yes" todir="${build.dir}/reports">
+                <fileset dir="unit-tests">
+                    <include name="**/*Tests.java"/>
+                    <include name="**/*Test.java"/>
+                    <exclude name="**/CompassSearchTest.java"/>
+                </fileset>
+            </batchtest>
+            <classpath>
+                <path refid="project.classpath"/>
+                <path refid="test.classpath"/>
+            </classpath>
+        </junit>
+        <fail if="tests.have.failed"/>
+    </target>
+
+    <target name="datanucleusenhance" depends="compile"
+            description="Performs enhancement on compiled data classes.">
+        <enhance_war war="war"/>
+    </target>
+
+    <target name="compile-flex">
+        <taskdef classpath="${FLEX_HOME}/ant/lib/flextasks.jar" resource="flexTasks.tasks"/>
+        <mxmlc file="flex/ui.mxml">
+            <source-path path-element="flex/src"/>
+        </mxmlc>
+        <copy todir="war">
+            <fileset dir="flex">
+                <include name="**/*.swf"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="runserver" depends="datanucleusenhance,compile-flex"
+            description="Starts the development server.">
+        <dev_appserver war="war"/>
+    </target>
+
+    <target name="update" depends="datanucleusenhance"
+            description="Uploads the application to App Engine.">
+        <appcfg action="update" war="war"/>
+    </target>
+
+    <target name="update_indexes" depends="datanucleusenhance"
+            description="Uploads just the datastore index configuration to App Engine.">
+        <appcfg action="update_indexes" war="war"/>
+    </target>
+
+    <target name="rollback" depends="datanucleusenhance"
+            description="Rolls back an interrupted application update.">
+        <appcfg action="rollback" war="war"/>
+    </target>
+
+    <target name="request_logs"
+            description="Downloads log data from App Engine for the application.">
+        <appcfg action="request_logs" war="war">
+            <options>
+                <arg value="--num_days=5"/>
+            </options>
+            <args>
+                <arg value="logs.txt"/>
+            </args>
+        </appcfg>
+    </target>
+
+</project>
+
