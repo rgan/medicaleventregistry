@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Application
+        xmlns:mx="http://www.adobe.com/2006/mxml"
+        horizontalAlign="center" verticalAlign="middle"
+        >
+    <mx:Script>
+            <![CDATA[
+                import mx.controls.Alert;
+        import mx.rpc.events.ResultEvent;
+        import mx.rpc.events.FaultEvent;
+        import mx.collections.ArrayCollection;
+        import mx.rpc.events.ResultEvent;
+
+        import com.adobe.serialization.json.JSON;
+
+        import mx.managers.CursorManager;
+        import mx.events.DropdownEvent;
+
+        private function addNewEventType():void {
+            eventTypeServiceAdd.send();
+        }
+
+        private function addMedicalEvent():void {
+            Alert.show(who.text + "-" + dateFieldEntry.text
+                    + "-" + eventTypeCombo.selectedItem.data);
+            eventServiceAdd.send();
+        }
+
+        private function addUser():void {
+            Alert.show("not yet implemented")
+        }
+
+        private function loginUser():void {
+            Alert.show("not yet implemented")
+        }
+
+        private function doSearch():void {
+            CursorManager.setBusyCursor();
+            eventsSearchService.url = "rest/events/" + searchEventType.selectedItem.data
+                    + "/" + escape(dateFrom.text) + "/" + escape(dateTo.text);
+            Alert.show(eventsSearchService.url)
+            //eventsSearchService.send();
+        }
+
+        private function showSearchResults(event:ResultEvent):void
+        {
+            var rawData:String = String(event.result);
+            var arr:Array = (JSON.decode(rawData) as Array);
+
+            var searchResults:ArrayCollection = new ArrayCollection(arr)
+            searchResultsGrid.dataProvider = searchResults;
+            CursorManager.removeBusyCursor();
+        }
+
+        var eventTypesCache:ArrayCollection;
+
+        private function getEventTypes(event:ResultEvent):void
+        {
+            var rawData:String = String(event.result);
+            var arr:Array = (JSON.decode(rawData) as Array);
+
+            eventTypesCache = new ArrayCollection(arr)
+            eventTypeCombo.dataProvider = eventTypesCache;
+            initSearchEventTypeCombo();
+            initEventTypesGrid();
+            CursorManager.removeBusyCursor();
+        }
+
+        private function showError(event:FaultEvent):void {
+            CursorManager.removeBusyCursor();
+            // Handle operation fault.
+            Alert.show(event.fault.faultString, "Error");
+        }
+
+        private function initComboData():void {
+            CursorManager.setBusyCursor();
+            eventTypeService.send();
+        }
+
+        private function updateEventTypesCache(event:ResultEvent):void
+        {
+            initComboData();
+        }
+
+        private function initSearchEventTypeCombo():void {
+            if (searchEventType != null) {
+                searchEventType.dataProvider = eventTypesCache;
+            }
+        }
+
+        private function initEventTypesGrid():void {
+            if (eventTypesGrid != null) {
+                eventTypesGrid.dataProvider = eventTypesCache;
+            }
+        }
+     
+        ]]>
+    </mx:Script>
+
+    <mx:HTTPService id="eventTypeService" url="rest/types/"
+                    useProxy="false"
+                    method="GET"
+                    resultFormat="text"
+                    fault="showError(event)"
+                    result="getEventTypes(event)">
+    </mx:HTTPService>
+
+    <mx:HTTPService id="eventTypeServiceAdd"
+                    url="rest/types/{typeName.text}"
+                    useProxy="false"
+                    method="POST"
+                    resultFormat="text"
+                    fault="showError(event)"
+                    result="updateEventTypesCache(event)">
+    </mx:HTTPService>
+
+    <mx:HTTPService id="eventsSearchService"
+                    useProxy="false"
+                    method="GET"
+                    resultFormat="text"
+                    fault="showError(event)"
+                    result="showSearchResults(event)">
+    </mx:HTTPService>
+
+    <mx:HTTPService id="eventServiceAdd" url="rest/events/"
+                    useProxy="false"
+                    method="POST"
+                    resultFormat="text"
+                    fault="showError(event)">
+        <mx:request xmlns="">
+            <name>{who.text}</name>
+            <lat>{lat.text}</lat>
+            <lon>{lon.text}</lon>
+            <dateReported>{dateFieldEntry.text}</dateReported>
+            <eventTypeId>{eventTypeCombo.selectedItem.data}</eventTypeId>
+        </mx:request>
+    </mx:HTTPService>
+
+    <mx:ApplicationControlBar dock="true">
+        <mx:Label
+                text="Global Sapiensis"
+                fontFamily="Verdana" fontWeight="bold" fontSize="12"
+                />
+        <mx:Spacer width="100%"/>
+        <mx:Button label="Log out"/>
+    </mx:ApplicationControlBar>
+
+    <mx:HBox height="500" width="800">
+        <mx:VBox height="500" width="315">
+            <mx:LinkBar dataProvider="{myViewStack}" borderStyle="solid"/>
+
+            <mx:ViewStack id="myViewStack"
+                          borderStyle="solid" height="400" width="100%">
+
+                <mx:Canvas id="addEvent" label="Add Event">
+                    <mx:Form>
+
+                        <mx:FormHeading label="Add a medical event"/>
+
+                        <mx:FormItem label="Who:">
+                            <mx:TextInput id="who"/>
+                        </mx:FormItem>
+
+                        <mx:FormItem label="Date:">
+                            <mx:DateField id="dateFieldEntry"
+                                          yearNavigationEnabled="true"/>
+                        </mx:FormItem>
+
+                        <mx:FormItem label="Lat:">
+                            <mx:TextInput id="lat"/>
+                        </mx:FormItem>
+
+                        <mx:FormItem label="Lon:">
+                            <mx:TextInput id="lon"/>
+                        </mx:FormItem>
+
+                        <mx:FormItem label="What:">
+                            <mx:ComboBox id="eventTypeCombo"
+                                         creationComplete="initComboData()"
+                                    >
+                            </mx:ComboBox>
+                        </mx:FormItem>
+
+                        <mx:FormItem>
+                            <mx:Button id="submitAddEvent"
+                                       label="Add" click="addMedicalEvent()"/>
+                        </mx:FormItem>
+
+                    </mx:Form>
+                </mx:Canvas>
+
+                <mx:Canvas id="addEventType" label="Add Event Type">
+                    <mx:VBox>
+                        <mx:Form>
+
+                            <mx:FormHeading label="Add a medical event type"/>
+
+                            <mx:FormItem label="Name:">
+                                <mx:TextInput id="typeName"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem>
+                                <mx:Button id="submitAddType"
+                                           label="Add" click="addNewEventType()"/>
+                            </mx:FormItem>
+
+                        </mx:Form>
+                        <mx:Label text="All Event Types" fontWeight="bold"/>
+                        <mx:DataGrid id="eventTypesGrid"
+                                     width="100%"
+                                     creationComplete="initEventTypesGrid()"
+                                >
+                            <mx:columns>
+                                <mx:DataGridColumn id="idCol"
+                                                   dataField="data"
+                                                   headerText="Id"/>
+                                <mx:DataGridColumn id="nameCol"
+                                                   dataField="label"
+                                                   headerText="Name"/>
+                            </mx:columns>
+
+                        </mx:DataGrid>
+                    </mx:VBox>
+                </mx:Canvas>
+
+                <mx:Canvas id="search" label="Search">
+                    <mx:VBox>
+                        <mx:Form>
+
+                            <mx:FormHeading label="Search"/>
+
+                            <mx:FormItem label="Event Type:">
+                                <mx:ComboBox id="searchEventType"
+                                             creationComplete="initSearchEventTypeCombo()">
+                                </mx:ComboBox>
+                            </mx:FormItem>
+
+                            <mx:FormItem label="Date from:">
+                                <mx:DateField id="dateFrom"
+                                              yearNavigationEnabled="true"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem label="Date to:">
+                                <mx:DateField id="dateTo" yearNavigationEnabled="true"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem>
+                                <mx:Button id="submitSearch"
+                                           label="Search" click="doSearch()"/>
+                            </mx:FormItem>
+
+                        </mx:Form>
+
+                        <mx:Label text="Search Results" fontWeight="bold"/>
+                        <mx:DataGrid id="searchResultsGrid"
+                                     width="100%"
+                                >
+                            <mx:columns>
+                                <mx:DataGridColumn id="whoCol"
+                                                   dataField="who"
+                                                   headerText="Name"/>
+                                <mx:DataGridColumn id="whenCol"
+                                                   dataField="when"
+                                                   headerText="Date"
+                                                   width="60"/>
+                                <mx:DataGridColumn id="latCol"
+                                                   dataField="lat"
+                                                   headerText="Lat"
+                                                   width="60"/>
+                                <mx:DataGridColumn id="lonCol"
+                                                   dataField="lon"
+                                                   headerText="Lon"
+                                                   width="60"/>
+                            </mx:columns>
+
+                        </mx:DataGrid>
+                    </mx:VBox>
+                </mx:Canvas>
+
+                <mx:Canvas id="register" label="Login">
+                    <mx:VBox>
+                        <mx:Form>
+
+                            <mx:FormHeading label="Login"/>
+
+                            <mx:FormItem label="Username:">
+                                <mx:TextInput id="register_username"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem label="Password:">
+                                <mx:TextInput id="register_password"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem>
+                                <mx:Button id="submitLogin"
+                                           label="Login" click="loginUser()"/>
+                            </mx:FormItem>
+
+                        </mx:Form>
+                        <mx:Label text="If you don't have a login, register below." fontWeight="bold"/>
+
+                        <mx:Form>
+
+                            <mx:FormHeading label="Register"/>
+
+                            <mx:FormItem label="Username:">
+                                <mx:TextInput id="username"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem label="Password:">
+                                <mx:TextInput id="password"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem>
+                                <mx:Button id="submitAddUser"
+                                           label="Add" click="addUser()"/>
+                            </mx:FormItem>
+
+                        </mx:Form>
+                    </mx:VBox>
+
+                </mx:Canvas>
+
+            </mx:ViewStack>
+        </mx:VBox>
+        <mx:Canvas id="map" label="Map">
+            <mx:Label text="Map"/>
+        </mx:Canvas>
+    </mx:HBox>
+
+</mx:Application>
+
