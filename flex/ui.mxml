@@ -11,19 +11,26 @@
         import mx.rpc.events.FaultEvent;
         import mx.collections.ArrayCollection;
         import mx.rpc.events.ResultEvent;
+        import mx.utils.*;
 
+        import com.google.maps.LatLng;
+        import com.google.maps.Map;
+        import com.google.maps.MapEvent;
+        import com.google.maps.MapMouseEvent;
+        import com.google.maps.MapType;
+        import com.google.maps.controls.ZoomControl;
+        import com.google.maps.controls.PositionControl;
         import com.adobe.serialization.json.JSON;
 
         import mx.managers.CursorManager;
         import mx.events.DropdownEvent;
+        import mx.events.ItemClickEvent;
 
         private function addNewEventType():void {
             eventTypeServiceAdd.send();
         }
 
         private function addMedicalEvent():void {
-            Alert.show(who.text + "-" + dateFieldEntry.text
-                    + "-" + eventTypeCombo.selectedItem.data);
             eventServiceAdd.send();
         }
 
@@ -38,9 +45,8 @@
         private function doSearch():void {
             CursorManager.setBusyCursor();
             eventsSearchService.url = "rest/events/" + searchEventType.selectedItem.data
-                    + "/" + escape(dateFrom.text) + "/" + escape(dateTo.text);
-            Alert.show(eventsSearchService.url)
-            //eventsSearchService.send();
+                    + "/" + encodeURIComponent(dateFrom.text) + "/" + encodeURIComponent(dateTo.text);
+            eventsSearchService.send();
         }
 
         private function showSearchResults(event:ResultEvent):void
@@ -53,13 +59,21 @@
             CursorManager.removeBusyCursor();
         }
 
+        private function handleEventServiceAddResult(event:ResultEvent):void
+        {
+            lat.text = "";
+            lon.text = "";
+            dateFieldEntry.text = "";
+            eventTypeCombo.selectedIndex = -1;
+            who.text = "";
+        }
+
         var eventTypesCache:ArrayCollection;
 
         private function getEventTypes(event:ResultEvent):void
         {
             var rawData:String = String(event.result);
             var arr:Array = (JSON.decode(rawData) as Array);
-
             eventTypesCache = new ArrayCollection(arr)
             eventTypeCombo.dataProvider = eventTypesCache;
             initSearchEventTypeCombo();
@@ -94,8 +108,36 @@
                 eventTypesGrid.dataProvider = eventTypesCache;
             }
         }
-     
-        ]]>
+
+        private var mapMode = 0;
+
+        private function onMapClick(event:MapMouseEvent):void {
+            if (mapMode == 1) {
+                lat.text = event.latLng.lat();
+                lon.text = event.latLng.lng();
+            }
+        }
+
+        private function handleMapButtonBarClick(event:ItemClickEvent):void {
+            if (event.index == 0) {
+                mapMode = 0;
+                this.map.setCenter(new LatLng(0, 0), 1, MapType.NORMAL_MAP_TYPE);
+            }
+
+            if (event.index == 1) {
+                mapMode = 1;
+            }
+        }
+
+        private function onMapReady(event:Event):void {
+            this.map.setCenter(new LatLng(0, 0), 1, MapType.NORMAL_MAP_TYPE);
+            this.map.addControl(new ZoomControl());
+            this.map.addControl(new PositionControl());
+            this.map.addEventListener(MapMouseEvent.CLICK, onMapClick);
+        }
+
+
+      ]]>
     </mx:Script>
 
     <mx:HTTPService id="eventTypeService" url="rest/types/"
@@ -113,6 +155,9 @@
                     resultFormat="text"
                     fault="showError(event)"
                     result="updateEventTypesCache(event)">
+        <mx:request xmlns="">
+            <name>{typeName.text}</name>
+        </mx:request>
     </mx:HTTPService>
 
     <mx:HTTPService id="eventsSearchService"
@@ -127,7 +172,8 @@
                     useProxy="false"
                     method="POST"
                     resultFormat="text"
-                    fault="showError(event)">
+                    fault="showError(event)"
+                    result="handleEventServiceAddResult(event)">
         <mx:request xmlns="">
             <name>{who.text}</name>
             <lat>{lat.text}</lat>
@@ -324,8 +370,27 @@
 
             </mx:ViewStack>
         </mx:VBox>
-        <mx:Canvas id="map" label="Map">
-            <mx:Label text="Map"/>
+        <mx:Canvas id="mapPanel" label="Map">
+            <mx:VBox>
+                <mx:ToggleButtonBar
+                        borderStyle="solid"
+                        horizontalGap="5"
+                        itemClick="handleMapButtonBarClick(event);"
+                        toggleOnClick="true"
+                        selectedIndex="-1">
+
+                    <mx:dataProvider>
+                        <mx:String>Full Extent</mx:String>
+                        <mx:String>Place Marker</mx:String>
+                    </mx:dataProvider>
+
+                </mx:ToggleButtonBar>
+
+
+                <maps:Map xmlns:maps="com.google.maps.*" id="map" mapevent_mapready="onMapReady(event)"
+                          height="400" width="485"
+                          key="ABQIAAAACdRRXK7NXPnq1up2FKcnMBThqlnqxp5lhEyBZcw9hnxivHI88BRpzBQD5FyEFkt0hm7DLyj8jR0Wdg"/>
+            </mx:VBox>
         </mx:Canvas>
     </mx:HBox>
 

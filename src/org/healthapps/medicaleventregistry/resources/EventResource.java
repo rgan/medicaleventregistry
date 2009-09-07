@@ -11,6 +11,7 @@ import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.Post;
 import org.restlet.resource.ServerResource;
+import org.restlet.resource.Get;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -21,13 +22,14 @@ public class EventResource extends ServerResource {
     private MedicalEventDao dao;
 
     public EventResource() {
-        this(new MedicalEventDaoImpl());
+        this.dao = new MedicalEventDaoImpl();
     }
 
-    public EventResource(MedicalEventDao dao) {
-        this.dao = dao;
+    @Get
+    public Representation dummy() {
+        return new StringRepresentation("");
     }
-
+    
     @Post
     public Representation addEvent(Representation entity) {
         try {

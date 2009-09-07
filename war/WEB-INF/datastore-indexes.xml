@@ -1,0 +1,13 @@
+<datastore-indexes autoGenerate="false">
+
+    <datastore-index kind="MedicalEvent" ancestor="false" source="auto">
+        <property name="eventTypeId" direction="asc"/>
+        <property name="when" direction="asc"/>
+    </datastore-index>
+
+    <datastore-index kind="MedicalEventType" ancestor="false" source="auto">
+        <property name="__key__" direction="asc"/>
+        <property name="name" direction="asc"/>
+    </datastore-index>
+
+</datastore-indexes>

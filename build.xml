@@ -16,6 +16,7 @@
 
     <path id="test.classpath">
         <pathelement path="${build.dir}/test-classes"/>
+        <pathelement path="${build.dir}/functional-test-classes"/>
         <fileset dir="lib/test">
             <include name="*.jar"/>
         </fileset>
@@ -101,6 +102,35 @@
         <fail if="tests.have.failed"/>
     </target>
 
+    <target name="functional-tests"
+            description="Compiles sources and runs tests.">
+        <mkdir dir="${build.dir}/functional-test-reports"/>
+        <mkdir dir="${build.dir}/functional-test-classes"/>
+        <javac
+                srcdir="functional-tests"
+                destdir="${build.dir}/functional-test-classes"
+                debug="on">
+            <classpath>
+                <path refid="test.classpath"/>
+            </classpath>
+        </javac>
+        <junit failureproperty="tests.have.failed" errorproperty="tests.have.failed"
+               fork="yes" forkmode="perBatch" dir="${basedir}">
+            <formatter usefile="false" type="brief"/>
+            <formatter usefile="true" type="xml"/>
+            <batchtest fork="yes" todir="${build.dir}/functional-test-reports">
+                <fileset dir="functional-tests">
+                    <include name="**/*Tests.java"/>
+                    <include name="**/*Test.java"/>
+                </fileset>
+            </batchtest>
+            <classpath>
+                <path refid="test.classpath"/>
+            </classpath>
+        </junit>
+        <fail if="tests.have.failed"/>
+    </target>
+
     <target name="datanucleusenhance" depends="compile"
             description="Performs enhancement on compiled data classes.">
         <enhance_war war="war"/>
@@ -109,7 +139,12 @@
     <target name="compile-flex">
         <taskdef classpath="${FLEX_HOME}/ant/lib/flextasks.jar" resource="flexTasks.tasks"/>
         <mxmlc file="flex/ui.mxml">
+            <compiler.strict>false</compiler.strict>
             <source-path path-element="flex/src"/>
+            <compiler.include-libraries dir="flex/lib" append="true">
+                <include name="map_flex_1_16.swc"/>
+            </compiler.include-libraries>
+
         </mxmlc>
         <copy todir="war">
             <fileset dir="flex">
@@ -120,7 +155,8 @@
 
     <target name="runserver" depends="datanucleusenhance,compile-flex"
             description="Starts the development server.">
-        <dev_appserver war="war"/>
+        <dev_appserver war="war">
+        </dev_appserver>
     </target>
 
     <target name="update" depends="datanucleusenhance"
