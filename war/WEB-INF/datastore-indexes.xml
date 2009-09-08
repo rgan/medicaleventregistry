@@ -10,4 +10,10 @@
         <property name="name" direction="asc"/>
     </datastore-index>
 
+    <datastore-index kind="MedicalEvent" ancestor="false" source="manual">
+        <property name="createdById" direction="asc"/>
+        <property name="eventTypeId" direction="asc"/>
+        <property name="when" direction="asc"/>
+    </datastore-index>
+
 </datastore-indexes>

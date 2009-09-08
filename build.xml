@@ -23,6 +23,9 @@
         <fileset dir="${sdk.dir}/lib">
             <include name="impl/*.jar"/>
         </fileset>
+        <fileset dir="war/WEB-INF/lib">
+            <include name="org.restlet.jar"/>
+        </fileset>
     </path>
 
     <target name="clean">

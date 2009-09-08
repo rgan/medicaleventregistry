@@ -1,6 +1,7 @@
 package org.healthapps.medicaleventregistry.resources;
 
 import org.healthapps.medicaleventregistry.model.MedicalEvent;
+import org.healthapps.medicaleventregistry.model.User;
 import org.restlet.Context;
 import org.restlet.data.*;
 import org.restlet.representation.Representation;
@@ -9,11 +10,17 @@ public class EventResourceTest extends ResourceTestCase {
     private EventResource resource;
     private Response response;
     private Request request;
-
+    private User createdBy;
+    
     public void setUp() throws Exception {
         super.setUp();
         resource = new EventResource();
-        request = new Request(Method.POST, new Reference(URI));
+        createdBy = new User("test", "test", "test@f.com");
+        dao.store(createdBy);
+        request = new Request(Method.GET, new Reference(URI));
+        ChallengeResponse challengeResponse = new ChallengeResponse(ChallengeScheme.HTTP_BASIC,
+                createdBy.getName(), createdBy.getPassword());
+        request.setChallengeResponse(challengeResponse);
         response = new Response(request);
         resource.init(new Context(), request, response);
         eventType = createEventType("test");

@@ -1,7 +1,5 @@
 package org.healthapps.medicaleventregistry.resources;
 
-import org.healthapps.medicaleventregistry.dao.MedicalEventDao;
-import org.healthapps.medicaleventregistry.dao.MedicalEventDaoImpl;
 import org.healthapps.medicaleventregistry.model.MedicalEvent;
 import org.healthapps.medicaleventregistry.utils.JsonUtils;
 import org.restlet.data.MediaType;
@@ -9,7 +7,6 @@ import org.restlet.data.Status;
 import org.restlet.representation.Representation;
 import org.restlet.representation.StringRepresentation;
 import org.restlet.resource.Get;
-import org.restlet.resource.ServerResource;
 import org.restlet.resource.Post;
 
 import java.io.IOException;
@@ -19,12 +16,12 @@ import java.net.URLDecoder;
 
 import com.google.appengine.repackaged.com.google.common.collect.Lists;
 
-public class EventsResource extends ServerResource {
+public class EventsResource extends GuardedResource {
 
-    private MedicalEventDao dao;
-
-    public EventsResource() {
-        this.dao = new MedicalEventDaoImpl();
+    // Flex will not pass auth headers for a GET request.
+    @Post
+    public Representation searchViaPost() throws IOException {
+        return search();
     }
 
     @Get("json")
@@ -34,7 +31,7 @@ public class EventsResource extends ServerResource {
             Date toDate = EventResource.EVENT_DATE_FORMAT.parse(getAttributeValue("toDate"));
             Long typeId = Long.valueOf((String) getRequest()
                     .getAttributes().get("typeId"));
-            final Collection<MedicalEvent> events = dao.searchEvents(typeId, fromDate, toDate);
+            final Collection<MedicalEvent> events = dao.searchEvents(typeId, fromDate, toDate, getUser(getRequest()));
             Collection adaptedEvents = Lists.newArrayList();
             for(MedicalEvent event : events) {
                adaptedEvents.add(new MedicalEventAdaptor(event));

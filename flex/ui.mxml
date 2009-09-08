@@ -26,32 +26,88 @@
         import mx.events.DropdownEvent;
         import mx.events.ItemClickEvent;
 
+        import mx.utils.Base64Encoder;
+        import mx.rpc.http.mxml.HTTPService;
+
+        private var user:String;
+        private var pwd:String;
+
+        private function addAuthHeader(service:HTTPService):void {
+            var encoder:Base64Encoder = new Base64Encoder();
+            encoder.insertNewLines = false;
+            encoder.encode(user + ":" + pwd);
+
+            service.headers = {Authorization:"Basic " + encoder.toString()};
+        }
+
+
         private function addNewEventType():void {
+            addAuthHeader(eventServiceAdd);
             eventTypeServiceAdd.send();
         }
 
         private function addMedicalEvent():void {
+            addAuthHeader(eventServiceAdd);
             eventServiceAdd.send();
         }
 
         private function addUser():void {
-            Alert.show("not yet implemented")
+            CursorManager.setBusyCursor();
+            userService.send();
+        }
+
+        private function logout():void {
+            user = "";
+            pwd = "";
+            loggedIn.text = "";
+            addEvent.enabled = false;
+            search.enabled = false;
+        }
+
+        private function handleAuthServiceResult(event:ResultEvent):void {
+            CursorManager.removeBusyCursor();
+            user = username.text;
+            pwd = password.text;
+            username.text = "";
+            password.text = "";
+            loggedIn.text = "Welcome, " + user + " ";
+            addEvent.enabled = true;
+            search.enabled = true;
+        }
+
+        private function handleAuthServiceFault(event:FaultEvent):void {
+            CursorManager.removeBusyCursor();
+            password.text = "";
+            Alert.show("Login failed");
+        }
+
+        private function handleUserServiceResult(event:ResultEvent):void {
+            CursorManager.removeBusyCursor();
+            register_username.text = "";
+            register_password.text = "";
+            register_email.text = "";
         }
 
         private function loginUser():void {
-            Alert.show("not yet implemented")
+            CursorManager.setBusyCursor();
+            authService.send();
         }
 
         private function doSearch():void {
             CursorManager.setBusyCursor();
             eventsSearchService.url = "rest/events/" + searchEventType.selectedItem.data
                     + "/" + encodeURIComponent(dateFrom.text) + "/" + encodeURIComponent(dateTo.text);
+            addAuthHeader(eventsSearchService);
             eventsSearchService.send();
         }
 
         private function showSearchResults(event:ResultEvent):void
         {
             var rawData:String = String(event.result);
+            if (rawData == "") {
+                CursorManager.removeBusyCursor();
+                return;
+            }
             var arr:Array = (JSON.decode(rawData) as Array);
 
             var searchResults:ArrayCollection = new ArrayCollection(arr)
@@ -70,14 +126,13 @@
 
         var eventTypesCache:ArrayCollection;
 
-        private function getEventTypes(event:ResultEvent):void
+        private function handleEventTypesResult(event:ResultEvent):void
         {
             var rawData:String = String(event.result);
             var arr:Array = (JSON.decode(rawData) as Array);
             eventTypesCache = new ArrayCollection(arr)
-            eventTypeCombo.dataProvider = eventTypesCache;
+            initEventTypeCombo();
             initSearchEventTypeCombo();
-            initEventTypesGrid();
             CursorManager.removeBusyCursor();
         }
 
@@ -87,14 +142,20 @@
             Alert.show(event.fault.faultString, "Error");
         }
 
-        private function initComboData():void {
+        private function initEventTypesCombos():void {
             CursorManager.setBusyCursor();
             eventTypeService.send();
         }
 
         private function updateEventTypesCache(event:ResultEvent):void
         {
-            initComboData();
+            initEventTypesCombos();
+        }
+
+        private function initEventTypeCombo():void {
+            if (eventTypeCombo != null) {
+                eventTypeCombo.dataProvider = eventTypesCache;
+            }
         }
 
         private function initSearchEventTypeCombo():void {
@@ -103,18 +164,12 @@
             }
         }
 
-        private function initEventTypesGrid():void {
-            if (eventTypesGrid != null) {
-                eventTypesGrid.dataProvider = eventTypesCache;
-            }
-        }
-
         private var mapMode = 0;
 
         private function onMapClick(event:MapMouseEvent):void {
             if (mapMode == 1) {
-                lat.text = event.latLng.lat();
-                lon.text = event.latLng.lng();
+                lat.text = event.latLng.lat().toString();
+                lon.text = event.latLng.lng().toString();
             }
         }
 
@@ -136,7 +191,6 @@
             this.map.addEventListener(MapMouseEvent.CLICK, onMapClick);
         }
 
-
       ]]>
     </mx:Script>
 
@@ -145,7 +199,7 @@
                     method="GET"
                     resultFormat="text"
                     fault="showError(event)"
-                    result="getEventTypes(event)">
+                    result="handleEventTypesResult(event)">
     </mx:HTTPService>
 
     <mx:HTTPService id="eventTypeServiceAdd"
@@ -162,10 +216,13 @@
 
     <mx:HTTPService id="eventsSearchService"
                     useProxy="false"
-                    method="GET"
+                    method="POST" 
                     resultFormat="text"
                     fault="showError(event)"
                     result="showSearchResults(event)">
+        <mx:request xmlns="">
+            <dummy>dummy</dummy>
+        </mx:request>
     </mx:HTTPService>
 
     <mx:HTTPService id="eventServiceAdd" url="rest/events/"
@@ -183,13 +240,39 @@
         </mx:request>
     </mx:HTTPService>
 
+    <mx:HTTPService id="userService" url="rest/users/"
+                    useProxy="false"
+                    method="POST"
+                    resultFormat="text"
+                    fault="showError(event)"
+                    result="handleUserServiceResult(event)">
+        <mx:request xmlns="">
+            <username>{register_username.text}</username>
+            <password>{register_password.text}</password>
+            <email>{register_email.text}</email>
+        </mx:request>
+    </mx:HTTPService>
+
+    <mx:HTTPService id="authService" url="rest/sessions/"
+                    useProxy="false"
+                    method="POST"
+                    resultFormat="text"
+                    fault="handleAuthServiceFault(event)"
+                    result="handleAuthServiceResult(event)">
+        <mx:request xmlns="">
+            <username>{username.text}</username>
+            <password>{password.text}</password>
+        </mx:request>
+    </mx:HTTPService>
+
     <mx:ApplicationControlBar dock="true">
         <mx:Label
                 text="Global Sapiensis"
                 fontFamily="Verdana" fontWeight="bold" fontSize="12"
                 />
         <mx:Spacer width="100%"/>
-        <mx:Button label="Log out"/>
+        <mx:Label id="loggedIn" text=""/>
+        <mx:Button label="Log out" click="logout()"/>
     </mx:ApplicationControlBar>
 
     <mx:HBox height="500" width="800">
@@ -199,48 +282,92 @@
             <mx:ViewStack id="myViewStack"
                           borderStyle="solid" height="400" width="100%">
 
-                <mx:Canvas id="addEvent" label="Add Event">
-                    <mx:Form>
-
-                        <mx:FormHeading label="Add a medical event"/>
-
-                        <mx:FormItem label="Who:">
-                            <mx:TextInput id="who"/>
-                        </mx:FormItem>
-
-                        <mx:FormItem label="Date:">
-                            <mx:DateField id="dateFieldEntry"
-                                          yearNavigationEnabled="true"/>
-                        </mx:FormItem>
-
-                        <mx:FormItem label="Lat:">
-                            <mx:TextInput id="lat"/>
-                        </mx:FormItem>
-
-                        <mx:FormItem label="Lon:">
-                            <mx:TextInput id="lon"/>
-                        </mx:FormItem>
-
-                        <mx:FormItem label="What:">
-                            <mx:ComboBox id="eventTypeCombo"
-                                         creationComplete="initComboData()"
-                                    >
-                            </mx:ComboBox>
-                        </mx:FormItem>
-
-                        <mx:FormItem>
-                            <mx:Button id="submitAddEvent"
-                                       label="Add" click="addMedicalEvent()"/>
-                        </mx:FormItem>
-
-                    </mx:Form>
-                </mx:Canvas>
-
-                <mx:Canvas id="addEventType" label="Add Event Type">
+                <mx:Canvas id="register" label="Login">
                     <mx:VBox>
                         <mx:Form>
 
-                            <mx:FormHeading label="Add a medical event type"/>
+                            <mx:FormHeading label="Login"/>
+
+                            <mx:FormItem label="Username:">
+                                <mx:TextInput id="username"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem label="Password:">
+                                <mx:TextInput id="password" displayAsPassword="true"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem>
+                                <mx:Button id="submitLogin"
+                                           label="Login" click="loginUser()"/>
+                            </mx:FormItem>
+
+                        </mx:Form>
+                        <mx:Label text="If you don't have a login, register below." fontWeight="bold"/>
+                        <mx:Form>
+
+                            <mx:FormHeading label="Register"/>
+
+                            <mx:FormItem label="Username:">
+                                <mx:TextInput id="register_username"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem label="Email:">
+                                <mx:TextInput id="register_email"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem label="Password:">
+                                <mx:TextInput id="register_password" displayAsPassword="true"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem>
+                                <mx:Button id="submitAddUser"
+                                           label="Register" click="addUser()"/>
+                            </mx:FormItem>
+
+                        </mx:Form>
+
+                    </mx:VBox>
+
+                </mx:Canvas>
+
+                <mx:Canvas id="addEvent" label="Add Event" enabled="false">
+                    <mx:VBox>
+                        <mx:Form>
+
+                            <mx:FormHeading label="Add a medical event"/>
+
+                            <mx:FormItem label="Who:">
+                                <mx:TextInput id="who"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem label="Date:">
+                                <mx:DateField id="dateFieldEntry"
+                                              yearNavigationEnabled="true"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem label="Lat:">
+                                <mx:TextInput id="lat"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem label="Lon:">
+                                <mx:TextInput id="lon"/>
+                            </mx:FormItem>
+
+                            <mx:FormItem label="Event Type:">
+                                <mx:ComboBox id="eventTypeCombo"
+                                             creationComplete="initEventTypesCombos()"
+                                        >
+                                </mx:ComboBox>
+                            </mx:FormItem>
+
+                            <mx:FormItem>
+                                <mx:Button id="submitAddEvent"
+                                           label="Add" click="addMedicalEvent()"/>
+                            </mx:FormItem>
+
+                        </mx:Form>
+                        <mx:Form>
+                            <mx:FormHeading label="Add an event type"/>
 
                             <mx:FormItem label="Name:">
                                 <mx:TextInput id="typeName"/>
@@ -252,33 +379,18 @@
                             </mx:FormItem>
 
                         </mx:Form>
-                        <mx:Label text="All Event Types" fontWeight="bold"/>
-                        <mx:DataGrid id="eventTypesGrid"
-                                     width="100%"
-                                     creationComplete="initEventTypesGrid()"
-                                >
-                            <mx:columns>
-                                <mx:DataGridColumn id="idCol"
-                                                   dataField="data"
-                                                   headerText="Id"/>
-                                <mx:DataGridColumn id="nameCol"
-                                                   dataField="label"
-                                                   headerText="Name"/>
-                            </mx:columns>
-
-                        </mx:DataGrid>
                     </mx:VBox>
                 </mx:Canvas>
 
-                <mx:Canvas id="search" label="Search">
-                    <mx:VBox>
+                <mx:Canvas id="search" label="Search" width="100%" enabled="false">
+                    <mx:VBox width="100%">
                         <mx:Form>
 
                             <mx:FormHeading label="Search"/>
 
                             <mx:FormItem label="Event Type:">
                                 <mx:ComboBox id="searchEventType"
-                                             creationComplete="initSearchEventTypeCombo()">
+                                             creationComplete="initEventTypesCombos()">
                                 </mx:ComboBox>
                             </mx:FormItem>
 
@@ -293,7 +405,8 @@
 
                             <mx:FormItem>
                                 <mx:Button id="submitSearch"
-                                           label="Search" click="doSearch()"/>
+                                           label="Search"
+                                           click="doSearch()"/>
                             </mx:FormItem>
 
                         </mx:Form>
@@ -324,49 +437,6 @@
                     </mx:VBox>
                 </mx:Canvas>
 
-                <mx:Canvas id="register" label="Login">
-                    <mx:VBox>
-                        <mx:Form>
-
-                            <mx:FormHeading label="Login"/>
-
-                            <mx:FormItem label="Username:">
-                                <mx:TextInput id="register_username"/>
-                            </mx:FormItem>
-
-                            <mx:FormItem label="Password:">
-                                <mx:TextInput id="register_password"/>
-                            </mx:FormItem>
-
-                            <mx:FormItem>
-                                <mx:Button id="submitLogin"
-                                           label="Login" click="loginUser()"/>
-                            </mx:FormItem>
-
-                        </mx:Form>
-                        <mx:Label text="If you don't have a login, register below." fontWeight="bold"/>
-
-                        <mx:Form>
-
-                            <mx:FormHeading label="Register"/>
-
-                            <mx:FormItem label="Username:">
-                                <mx:TextInput id="username"/>
-                            </mx:FormItem>
-
-                            <mx:FormItem label="Password:">
-                                <mx:TextInput id="password"/>
-                            </mx:FormItem>
-
-                            <mx:FormItem>
-                                <mx:Button id="submitAddUser"
-                                           label="Add" click="addUser()"/>
-                            </mx:FormItem>
-
-                        </mx:Form>
-                    </mx:VBox>
-
-                </mx:Canvas>
 
             </mx:ViewStack>
         </mx:VBox>

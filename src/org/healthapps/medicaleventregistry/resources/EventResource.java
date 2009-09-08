@@ -16,7 +16,7 @@ import org.restlet.resource.Get;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class EventResource extends ServerResource {
+public class EventResource extends GuardedResource {
     public final static SimpleDateFormat EVENT_DATE_FORMAT = new SimpleDateFormat("MM/dd/yyyy");
 
     private MedicalEventDao dao;
@@ -40,7 +40,7 @@ public class EventResource extends ServerResource {
             final Double lat = Double.parseDouble(form.getFirstValue("lat"));
             final Double lon = Double.parseDouble(form.getFirstValue("lon"));
             final Long eventTypeId = Long.parseLong(form.getFirstValue("eventTypeId"));
-            final MedicalEvent event = new MedicalEvent(name, date, lat, lon, (MedicalEventType)dao.findById(eventTypeId, MedicalEventType.class.getName()));
+            final MedicalEvent event = new MedicalEvent(name, date, lat, lon, (MedicalEventType)dao.findById(eventTypeId, MedicalEventType.class.getName()), getUser(getRequest()));
             dao.store(event);
             setStatus(Status.SUCCESS_CREATED);
             Representation representation = new StringRepresentation("Event created",

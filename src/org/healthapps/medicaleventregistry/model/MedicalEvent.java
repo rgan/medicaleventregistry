@@ -18,12 +18,15 @@ public class MedicalEvent {
     private Double lon;
     @Persistent(defaultFetchGroup = "true")
     private Long eventTypeId;
+    @Persistent
+    private Long createdById;
 
-    public MedicalEvent(String name, Date date, Double lat, Double lon, MedicalEventType eventType) {
+    public MedicalEvent(String name, Date date, Double lat, Double lon, MedicalEventType eventType, User createdBy) {
         this.who = name;
         this.when = date;
         this.lat = lat;
         this.lon = lon;
+        this.createdById = createdBy.getId();
         this.eventTypeId = eventType.getId();
     }
 
@@ -49,5 +52,9 @@ public class MedicalEvent {
 
     public Long getEventTypeId() {
         return eventTypeId;
+    }
+
+    public Long getCreatedById() {
+        return createdById;
     }
 }

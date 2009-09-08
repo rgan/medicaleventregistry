@@ -2,6 +2,7 @@ package org.healthapps.medicaleventregistry.dao;
 
 import org.healthapps.medicaleventregistry.model.MedicalEvent;
 import org.healthapps.medicaleventregistry.model.MedicalEventType;
+import org.healthapps.medicaleventregistry.model.User;
 
 import java.util.Collection;
 import java.util.Date;
@@ -15,7 +16,11 @@ public interface MedicalEventDao {
 
     void store(MedicalEvent event);
 
-    Collection<MedicalEvent> searchEvents(Long typeId, Date fromDate, Date toDate);
+    Collection<MedicalEvent> searchEvents(Long typeId, Date fromDate, Date toDate, User user);
 
     Object findById(Long eventTypeId, String name);
+
+    void store(User user);
+
+    User findUserByName(String username);
 }

@@ -6,6 +6,7 @@ import com.google.appengine.api.datastore.PreparedQuery;
 import com.google.appengine.api.datastore.Query;
 import org.healthapps.medicaleventregistry.model.MedicalEvent;
 import org.healthapps.medicaleventregistry.model.MedicalEventType;
+import org.healthapps.medicaleventregistry.model.User;
 
 import java.util.Calendar;
 import java.util.Collection;
@@ -13,10 +14,13 @@ import java.util.Date;
 
 public class MedicalEventDaoTest extends LocalDatastoreTestCase {
     private MedicalEventDao dao;
+    private User createdBy;
 
     public void setUp() throws Exception {
         super.setUp();
         dao = new MedicalEventDaoImpl(PMF.get());
+        createdBy = new User("test", "test", "test@f.com");
+        dao.store(createdBy);
     }
 
     private PreparedQuery getPreparedQuery(String className) {
@@ -31,7 +35,7 @@ public class MedicalEventDaoTest extends LocalDatastoreTestCase {
         final double lon = 2.2;
         final MedicalEventType eventType = createEventType("test");
         final Date reportedDate = new Date();
-        MedicalEvent event = new MedicalEvent(name, reportedDate, lat, lon, eventType);
+        MedicalEvent event = new MedicalEvent(name, reportedDate, lat, lon, eventType, createdBy);
         dao.store(event);
 
         Calendar calendar = Calendar.getInstance();
@@ -41,8 +45,28 @@ public class MedicalEventDaoTest extends LocalDatastoreTestCase {
         calendar.setTime(reportedDate);
         calendar.add(Calendar.MONTH, 1);
         Date toDate = calendar.getTime();
-        final Collection<MedicalEvent> events = dao.searchEvents(1L, fromDate, toDate);
+        final Collection<MedicalEvent> events = dao.searchEvents(eventType.getId(), fromDate, toDate, createdBy);
         assertEquals(1, events.size());
+    }
+
+    public void testSearchNotShouldReturnValuesIfUserDoesNotMatch() {
+        final String name = "test";
+        final double lat = 2.1;
+        final double lon = 2.2;
+        final MedicalEventType eventType = createEventType("test");
+        final Date reportedDate = new Date();
+        MedicalEvent event = new MedicalEvent(name, reportedDate, lat, lon, eventType, createdBy);
+        dao.store(event);
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(reportedDate);
+        calendar.add(Calendar.MONTH, -1);
+        Date fromDate = calendar.getTime();
+        calendar.setTime(reportedDate);
+        calendar.add(Calendar.MONTH, 1);
+        Date toDate = calendar.getTime();
+        final Collection<MedicalEvent> events = dao.searchEvents(eventType.getId(), fromDate, toDate, new User("test","test", "t@f.com"));
+        assertEquals(0, events.size());
     }
 
     public void testShouldSaveEvent() {
@@ -50,7 +74,7 @@ public class MedicalEventDaoTest extends LocalDatastoreTestCase {
         final double lat = 2.1;
         final double lon = 2.2;
         final MedicalEventType eventType = createEventType("test");
-        MedicalEvent event = new MedicalEvent(name, new Date(), lat, lon, eventType);
+        MedicalEvent event = new MedicalEvent(name, new Date(), lat, lon, eventType, createdBy);
         dao.store(event);
         final PreparedQuery preparedQuery = getPreparedQuery(MedicalEvent.class.getSimpleName());
         assertEquals(1, preparedQuery.countEntities());
@@ -58,7 +82,8 @@ public class MedicalEventDaoTest extends LocalDatastoreTestCase {
         assertEquals(name, entity.getProperty("who"));
         assertEquals(lat, entity.getProperty("lat"));
         assertEquals(lon, entity.getProperty("lon"));
-        assertEquals(1L, entity.getProperty("eventTypeId"));
+        assertEquals(createdBy.getId(), entity.getProperty("createdById"));
+        assertEquals(eventType.getId(), entity.getProperty("eventTypeId"));
     }
 
     public void testShouldSaveEventType() {
