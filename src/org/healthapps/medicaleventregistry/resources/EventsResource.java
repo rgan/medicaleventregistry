@@ -1,6 +1,8 @@
 package org.healthapps.medicaleventregistry.resources;
 
+import com.google.appengine.repackaged.com.google.common.collect.Lists;
 import org.healthapps.medicaleventregistry.model.MedicalEvent;
+import org.healthapps.medicaleventregistry.model.User;
 import org.healthapps.medicaleventregistry.utils.JsonUtils;
 import org.restlet.data.MediaType;
 import org.restlet.data.Status;
@@ -10,11 +12,9 @@ import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.util.Collection;
 import java.util.Date;
-import java.net.URLDecoder;
-
-import com.google.appengine.repackaged.com.google.common.collect.Lists;
 
 public class EventsResource extends GuardedResource {
 
@@ -31,10 +31,16 @@ public class EventsResource extends GuardedResource {
             Date toDate = EventResource.EVENT_DATE_FORMAT.parse(getAttributeValue("toDate"));
             Long typeId = Long.valueOf((String) getRequest()
                     .getAttributes().get("typeId"));
-            final Collection<MedicalEvent> events = dao.searchEvents(typeId, fromDate, toDate, getUser(getRequest()));
+            final User user = getUser(getRequest());
+            final Long userId = user != null ? user.getId() : null;
+            final Collection<MedicalEvent> events = dao.searchEvents(typeId, fromDate, toDate);
             Collection adaptedEvents = Lists.newArrayList();
-            for(MedicalEvent event : events) {
-               adaptedEvents.add(new MedicalEventAdaptor(event));
+            for (MedicalEvent event : events) {
+                if (event.getCreatedById().equals(userId)) {
+                    adaptedEvents.add(new MedicalEventAdaptor(event, dao));
+                } else {
+                    adaptedEvents.add(new MedicalEventAdaptor(event, dao));
+                }
             }
             return new StringRepresentation(JsonUtils.toJsonArray(adaptedEvents));
         } catch (Exception ex) {

@@ -45,28 +45,8 @@ public class MedicalEventDaoTest extends LocalDatastoreTestCase {
         calendar.setTime(reportedDate);
         calendar.add(Calendar.MONTH, 1);
         Date toDate = calendar.getTime();
-        final Collection<MedicalEvent> events = dao.searchEvents(eventType.getId(), fromDate, toDate, createdBy);
+        final Collection<MedicalEvent> events = dao.searchEvents(eventType.getId(), fromDate, toDate);
         assertEquals(1, events.size());
-    }
-
-    public void testSearchNotShouldReturnValuesIfUserDoesNotMatch() {
-        final String name = "test";
-        final double lat = 2.1;
-        final double lon = 2.2;
-        final MedicalEventType eventType = createEventType("test");
-        final Date reportedDate = new Date();
-        MedicalEvent event = new MedicalEvent(name, reportedDate, lat, lon, eventType, createdBy);
-        dao.store(event);
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(reportedDate);
-        calendar.add(Calendar.MONTH, -1);
-        Date fromDate = calendar.getTime();
-        calendar.setTime(reportedDate);
-        calendar.add(Calendar.MONTH, 1);
-        Date toDate = calendar.getTime();
-        final Collection<MedicalEvent> events = dao.searchEvents(eventType.getId(), fromDate, toDate, new User("test","test", "t@f.com"));
-        assertEquals(0, events.size());
     }
 
     public void testShouldSaveEvent() {
@@ -84,6 +64,7 @@ public class MedicalEventDaoTest extends LocalDatastoreTestCase {
         assertEquals(lon, entity.getProperty("lon"));
         assertEquals(createdBy.getId(), entity.getProperty("createdById"));
         assertEquals(eventType.getId(), entity.getProperty("eventTypeId"));
+        assertEquals(new Long(event.getCSCode().getTens()), entity.getProperty("csTens"));
     }
 
     public void testShouldSaveEventType() {

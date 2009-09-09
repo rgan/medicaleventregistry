@@ -20,6 +20,8 @@
         import com.google.maps.MapType;
         import com.google.maps.controls.ZoomControl;
         import com.google.maps.controls.PositionControl;
+        import com.google.maps.LatLngBounds;
+        import com.google.maps.overlays.Marker;
         import com.adobe.serialization.json.JSON;
 
         import mx.managers.CursorManager;
@@ -62,6 +64,15 @@
             loggedIn.text = "";
             addEvent.enabled = false;
             search.enabled = false;
+            fullExtent();
+            clearMap();
+            clearSearch();
+        }
+
+        private function clearSearch():void {
+            searchResultsGrid.dataProvider = [];
+            dateFrom.text = "";
+            dateTo.text = "";
         }
 
         private function handleAuthServiceResult(event:ResultEvent):void {
@@ -164,28 +175,57 @@
             }
         }
 
-        private var mapMode = 0;
+        private var mapMode:int = 0;
+        private var INIT_ZOOM_LEVEL:int = 1;
+        private var DETAIL_ZOOM_LEVEL:int=6;
+
+        public function clearMap():void {
+           if (map) {
+            map.removeOverlays();
+           }
+        }
+        public function displayOnMap(vertices:Array):void {
+           var zoomLevel:int = DETAIL_ZOOM_LEVEL;
+           var center:LatLng;
+           if (vertices.length == 1) {
+              center = new LatLng(vertices[0].lat, vertices[0].lon)
+              var marker:Marker = new Marker(center);
+              map.addOverlay(marker);
+           } else {
+              center = new LatLngBounds(new LatLng(vertices[1].lat, vertices[1].lon),
+              new LatLng(vertices[0].lat, vertices[0].lon)).getCenter();
+           }
+           if (zoomLevel > DETAIL_ZOOM_LEVEL) {
+                zoomLevel = DETAIL_ZOOM_LEVEL;
+           }
+           map.setCenter(center, zoomLevel);
+        }
 
         private function onMapClick(event:MapMouseEvent):void {
             if (mapMode == 1) {
                 lat.text = event.latLng.lat().toString();
                 lon.text = event.latLng.lng().toString();
+                var marker = new Marker(event.latLng);
+                map.addOverlay(marker);
             }
         }
 
+        private function fullExtent() {
+            this.map.setCenter(new LatLng(0, 0), INIT_ZOOM_LEVEL, MapType.NORMAL_MAP_TYPE);
+        }
+                
         private function handleMapButtonBarClick(event:ItemClickEvent):void {
             if (event.index == 0) {
                 mapMode = 0;
-                this.map.setCenter(new LatLng(0, 0), 1, MapType.NORMAL_MAP_TYPE);
+                fullExtent();
             }
-
             if (event.index == 1) {
                 mapMode = 1;
             }
         }
 
         private function onMapReady(event:Event):void {
-            this.map.setCenter(new LatLng(0, 0), 1, MapType.NORMAL_MAP_TYPE);
+            this.map.setCenter(new LatLng(0, 0), INIT_ZOOM_LEVEL, MapType.NORMAL_MAP_TYPE);
             this.map.addControl(new ZoomControl());
             this.map.addControl(new PositionControl());
             this.map.addEventListener(MapMouseEvent.CLICK, onMapClick);
@@ -216,7 +256,7 @@
 
     <mx:HTTPService id="eventsSearchService"
                     useProxy="false"
-                    method="POST" 
+                    method="POST"
                     resultFormat="text"
                     fault="showError(event)"
                     result="showSearchResults(event)">
@@ -418,25 +458,36 @@
                             <mx:columns>
                                 <mx:DataGridColumn id="whoCol"
                                                    dataField="who"
-                                                   headerText="Name"/>
+                                                   headerText="Name"
+                                                   width="80" />
                                 <mx:DataGridColumn id="whenCol"
                                                    dataField="when"
                                                    headerText="Date"
                                                    width="60"/>
-                                <mx:DataGridColumn id="latCol"
-                                                   dataField="lat"
-                                                   headerText="Lat"
+                                <mx:DataGridColumn id="whatCol"
+                                                   dataField="eventType"
+                                                   headerText="Type"
                                                    width="60"/>
-                                <mx:DataGridColumn id="lonCol"
-                                                   dataField="lon"
-                                                   headerText="Lon"
-                                                   width="60"/>
+                                <mx:DataGridColumn id="geometryCol"
+                                                   dataField="vertices"
+                                                   headerText="Map"
+                                                   width="40">
+                                    <mx:itemRenderer>
+                                        <mx:Component>
+                                            <mx:Box width="100%" height="100%" horizontalAlign="center"
+                                                    verticalAlign="middle">
+                                                <mx:Button label="Map" width="100%">
+                                                    <mx:click>outerDocument.displayOnMap(data.vertices);</mx:click>
+                                                </mx:Button>
+                                            </mx:Box>
+                                        </mx:Component>
+                                    </mx:itemRenderer>
+                                </mx:DataGridColumn>
                             </mx:columns>
 
                         </mx:DataGrid>
                     </mx:VBox>
                 </mx:Canvas>
-
 
             </mx:ViewStack>
         </mx:VBox>

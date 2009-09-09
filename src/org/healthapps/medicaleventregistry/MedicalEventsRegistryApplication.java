@@ -26,6 +26,7 @@ public class MedicalEventsRegistryApplication extends Application {
         router.attach("/types/{typeName}", EventTypeResource.class);
         router.attach("/users/", UsersResource.class);
         router.attach("/sessions/", SessionsResource.class);
+
         return router;
     }
 }

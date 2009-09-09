@@ -1,5 +1,7 @@
 package org.healthapps.medicaleventregistry.model;
 
+import org.healthapps.utils.CSquareCode;
+
 import javax.jdo.annotations.*;
 import java.util.Date;
 
@@ -20,12 +22,22 @@ public class MedicalEvent {
     private Long eventTypeId;
     @Persistent
     private Long createdById;
+    @Persistent
+    private Integer csTens;
+    @Persistent
+    private Integer csUnits;
+    @Persistent
+    private Integer csTenths;
 
     public MedicalEvent(String name, Date date, Double lat, Double lon, MedicalEventType eventType, User createdBy) {
         this.who = name;
         this.when = date;
         this.lat = lat;
         this.lon = lon;
+        CSquareCode code = CSquareCode.from(lat, lon);
+        this.csTens = code.getTens();
+        this.csUnits = code.getUnits();
+        this.csTenths = code.getTenths();
         this.createdById = createdBy.getId();
         this.eventTypeId = eventType.getId();
     }
@@ -56,5 +68,9 @@ public class MedicalEvent {
 
     public Long getCreatedById() {
         return createdById;
+    }
+
+    public CSquareCode getCSCode() {
+        return new CSquareCode(csTens, csUnits, csTenths);
     }
 }

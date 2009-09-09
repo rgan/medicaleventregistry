@@ -31,7 +31,6 @@ public class EventsResourceTest extends ResourceTestCase {
         request.setChallengeResponse(challengeResponse);
         response = new Response(request);
         eventType = createEventType("test");
-
     }
 
     public void testShouldGetSearchResults() throws IOException {
@@ -53,7 +52,7 @@ public class EventsResourceTest extends ResourceTestCase {
         resource.init(new Context(), request, response);
         final Representation representation = resource.search();
         assertEquals(Status.SUCCESS_OK, response.getStatus());
-        assertEquals("[{\"lat\":2.1,\"lon\":2.2,\"when\":\"02/01/2009\",\"who\":\"test\"}]", representation.getText());
+        assertEquals("[{\"eventType\":\"test\",\"vertices\":[{\"lat\":2.1,\"lon\":2.2}],\"when\":\"02/01/2009\",\"who\":\"test\"}]", representation.getText());
     }
 
 }

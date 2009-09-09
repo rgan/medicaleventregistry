@@ -16,11 +16,12 @@ public interface MedicalEventDao {
 
     void store(MedicalEvent event);
 
-    Collection<MedicalEvent> searchEvents(Long typeId, Date fromDate, Date toDate, User user);
+    Collection<MedicalEvent> searchEvents(Long typeId, Date fromDate, Date toDate);
 
     Object findById(Long eventTypeId, String name);
 
     void store(User user);
 
     User findUserByName(String username);
+
 }

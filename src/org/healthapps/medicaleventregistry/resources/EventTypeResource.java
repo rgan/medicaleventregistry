@@ -17,14 +17,9 @@ import java.io.IOException;
 /**
  * Resource which has only one representation.
  */
-public class EventTypeResource extends ServerResource {
-    private MedicalEventDao dao;
+public class EventTypeResource extends BaseResource {
     private MedicalEventType eventType;
     private String eventTypeName;
-
-    public EventTypeResource() {
-        this.dao = new MedicalEventDaoImpl();
-    }
 
     @Override
     protected void doInit() throws ResourceException {

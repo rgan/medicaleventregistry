@@ -39,16 +39,22 @@ public class MedicalEventDaoImpl extends AbstractDao implements MedicalEventDao 
     }
 
     public void store(MedicalEvent event) {
-        storeObject(event);
+        PersistenceManager pm = getPM();
+        try {
+            // appengine does not allow multiple entity updates in one transaction
+            pm.makePersistent(event);
+        } finally {
+            pm.close();
+        }
     }
 
-    public Collection<MedicalEvent> searchEvents(Long typeId, Date fromDate, Date toDate, User user) {
+    public Collection<MedicalEvent> searchEvents(Long typeId, Date fromDate, Date toDate) {
         PersistenceManager pm = getPM();
-        String queryString = "select from " + MedicalEvent.class.getName() + " where createdById == userId && eventTypeId == typeId && when < toDate && when > fromDate PARAMETERS long userId, long typeId, java.util.Date toDate, java.util.Date fromDate order by when ascending";
+        String queryString = "select from " + MedicalEvent.class.getName() + " where eventTypeId == typeId && when < toDate && when > fromDate PARAMETERS long typeId, java.util.Date toDate, java.util.Date fromDate order by when ascending";
         try {
             Query query = pm.newQuery(queryString);
             query.setRange(0, MAX_RETURNED);
-            List<MedicalEvent> events = (List<MedicalEvent>) query.executeWithArray(user.getId(), typeId, toDate, fromDate);
+            List<MedicalEvent> events = (List<MedicalEvent>) query.executeWithArray(typeId, toDate, fromDate);
             return pm.detachCopyAll(events);
         } finally {
             pm.close();

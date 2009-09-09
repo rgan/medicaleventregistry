@@ -7,13 +7,7 @@ import org.restlet.data.ChallengeResponse;
 import org.restlet.data.Request;
 import org.restlet.resource.ServerResource;
 
-public class GuardedResource extends ServerResource {
-
-    protected MedicalEventDao dao;
-
-    public GuardedResource() {
-        this.dao = new MedicalEventDaoImpl();
-    }
+public class GuardedResource extends BaseResource {
 
     protected User getUser(Request request) {
         final ChallengeResponse challengeResponse = request.getChallengeResponse();

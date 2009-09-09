@@ -19,12 +19,6 @@ import java.util.Date;
 public class EventResource extends GuardedResource {
     public final static SimpleDateFormat EVENT_DATE_FORMAT = new SimpleDateFormat("MM/dd/yyyy");
 
-    private MedicalEventDao dao;
-
-    public EventResource() {
-        this.dao = new MedicalEventDaoImpl();
-    }
-
     @Get
     public Representation dummy() {
         return new StringRepresentation("");

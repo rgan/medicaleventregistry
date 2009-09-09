@@ -1,25 +1,24 @@
 package org.healthapps.medicaleventregistry.resources;
 
-import org.healthapps.medicaleventregistry.dao.MedicalEventDao;
 import org.healthapps.medicaleventregistry.model.MedicalEvent;
 import org.healthapps.medicaleventregistry.model.MedicalEventType;
+import org.healthapps.medicaleventregistry.dao.MedicalEventDao;
+import org.healthapps.utils.CSquareCode;
 import org.healthapps.utils.GeoLocation;
 
 import java.util.List;
 
-import com.google.appengine.repackaged.com.google.common.collect.Lists;
-
-public class MedicalEventAdaptor {
+public class MedicalEventSummaryAdaptor {
     private MedicalEvent medicalEvent;
     private MedicalEventType eventType;
 
-    public MedicalEventAdaptor(MedicalEvent medicalEvent, MedicalEventDao dao) {
+    public MedicalEventSummaryAdaptor(MedicalEvent medicalEvent, MedicalEventDao dao) {
         this.medicalEvent = medicalEvent;
-        this.eventType = (MedicalEventType) dao.findById(medicalEvent.getEventTypeId(), MedicalEventType.class.getName());
+        this.eventType = (MedicalEventType)dao.findById(eventType.getId(), MedicalEventType.class.getName());
     }
 
     public String getWho() {
-        return medicalEvent.getWho();
+        return "";
     }
 
     public String getWhen() {
@@ -27,11 +26,11 @@ public class MedicalEventAdaptor {
     }
 
     public List<GeoLocation> getVertices() {
-        return Lists.newArrayList(new GeoLocation(medicalEvent.getLat(), medicalEvent.getLon()));
+        final CSquareCode csCode = medicalEvent.getCSCode();
+        return CSquareCode.boundingBoxfrom(csCode.getTens(), csCode.getUnits()).getVertices();
     }
 
     public String getEventType() {
         return eventType.getName();
     }
-
 }
