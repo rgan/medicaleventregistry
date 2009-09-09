@@ -14,7 +14,7 @@ public class MedicalEventSummaryAdaptor {
 
     public MedicalEventSummaryAdaptor(MedicalEvent medicalEvent, MedicalEventDao dao) {
         this.medicalEvent = medicalEvent;
-        this.eventType = (MedicalEventType)dao.findById(eventType.getId(), MedicalEventType.class.getName());
+        this.eventType = (MedicalEventType)dao.findById(medicalEvent.getEventTypeId(), MedicalEventType.class.getName());
     }
 
     public String getWho() {

@@ -6,22 +6,14 @@
         >
     <mx:Script>
             <![CDATA[
-                import mx.controls.Alert;
+        import com.google.maps.MapMouseEvent;
+import mx.controls.Alert;
         import mx.rpc.events.ResultEvent;
         import mx.rpc.events.FaultEvent;
         import mx.collections.ArrayCollection;
         import mx.rpc.events.ResultEvent;
         import mx.utils.*;
 
-        import com.google.maps.LatLng;
-        import com.google.maps.Map;
-        import com.google.maps.MapEvent;
-        import com.google.maps.MapMouseEvent;
-        import com.google.maps.MapType;
-        import com.google.maps.controls.ZoomControl;
-        import com.google.maps.controls.PositionControl;
-        import com.google.maps.LatLngBounds;
-        import com.google.maps.overlays.Marker;
         import com.adobe.serialization.json.JSON;
 
         import mx.managers.CursorManager;
@@ -30,9 +22,11 @@
 
         import mx.utils.Base64Encoder;
         import mx.rpc.http.mxml.HTTPService;
+        import org.healthapps.map.MapHelper;
 
         private var user:String;
         private var pwd:String;
+        public var mapHelper:MapHelper;
 
         private function addAuthHeader(service:HTTPService):void {
             var encoder:Base64Encoder = new Base64Encoder();
@@ -42,6 +36,14 @@
             service.headers = {Authorization:"Basic " + encoder.toString()};
         }
 
+		public function onMapReady(event:Event):void {
+		    mapHelper = new MapHelper(map);
+		    this.map.addEventListener(MapMouseEvent.CLICK, onMapClick);
+		}
+		
+        public function onMapClick(event:MapMouseEvent):void {
+            mapHelper.populateFieldsAndDrawMarker(event.latLng, lat, lon);
+        }
 
         private function addNewEventType():void {
             addAuthHeader(eventServiceAdd);
@@ -64,15 +66,19 @@
             loggedIn.text = "";
             addEvent.enabled = false;
             search.enabled = false;
-            fullExtent();
-            clearMap();
+            myViewStack.selectedIndex = 0;
+            mapHelper.fullExtent();
+            mapHelper.clearMap();
             clearSearch();
+            clearEventForm();
         }
 
         private function clearSearch():void {
-            searchResultsGrid.dataProvider = [];
-            dateFrom.text = "";
-            dateTo.text = "";
+            if (dateFrom != null) {
+                searchResultsGrid.dataProvider = [];
+                dateFrom.text = "";
+                dateTo.text = "";
+            }
         }
 
         private function handleAuthServiceResult(event:ResultEvent):void {
@@ -126,13 +132,20 @@
             CursorManager.removeBusyCursor();
         }
 
+        private function clearEventForm():void {
+            if (lat != null) {
+                lat.text = "";
+                lon.text = "";
+                dateFieldEntry.text = "";
+                eventTypeCombo.selectedIndex = -1;
+                who.text = "";
+
+            }
+        }
+
         private function handleEventServiceAddResult(event:ResultEvent):void
         {
-            lat.text = "";
-            lon.text = "";
-            dateFieldEntry.text = "";
-            eventTypeCombo.selectedIndex = -1;
-            who.text = "";
+            clearEventForm();
         }
 
         var eventTypesCache:ArrayCollection;
@@ -175,62 +188,7 @@
             }
         }
 
-        private var mapMode:int = 0;
-        private var INIT_ZOOM_LEVEL:int = 1;
-        private var DETAIL_ZOOM_LEVEL:int=6;
-
-        public function clearMap():void {
-           if (map) {
-            map.removeOverlays();
-           }
-        }
-        public function displayOnMap(vertices:Array):void {
-           var zoomLevel:int = DETAIL_ZOOM_LEVEL;
-           var center:LatLng;
-           if (vertices.length == 1) {
-              center = new LatLng(vertices[0].lat, vertices[0].lon)
-              var marker:Marker = new Marker(center);
-              map.addOverlay(marker);
-           } else {
-              center = new LatLngBounds(new LatLng(vertices[1].lat, vertices[1].lon),
-              new LatLng(vertices[0].lat, vertices[0].lon)).getCenter();
-           }
-           if (zoomLevel > DETAIL_ZOOM_LEVEL) {
-                zoomLevel = DETAIL_ZOOM_LEVEL;
-           }
-           map.setCenter(center, zoomLevel);
-        }
-
-        private function onMapClick(event:MapMouseEvent):void {
-            if (mapMode == 1) {
-                lat.text = event.latLng.lat().toString();
-                lon.text = event.latLng.lng().toString();
-                var marker = new Marker(event.latLng);
-                map.addOverlay(marker);
-            }
-        }
-
-        private function fullExtent() {
-            this.map.setCenter(new LatLng(0, 0), INIT_ZOOM_LEVEL, MapType.NORMAL_MAP_TYPE);
-        }
-                
-        private function handleMapButtonBarClick(event:ItemClickEvent):void {
-            if (event.index == 0) {
-                mapMode = 0;
-                fullExtent();
-            }
-            if (event.index == 1) {
-                mapMode = 1;
-            }
-        }
-
-        private function onMapReady(event:Event):void {
-            this.map.setCenter(new LatLng(0, 0), INIT_ZOOM_LEVEL, MapType.NORMAL_MAP_TYPE);
-            this.map.addControl(new ZoomControl());
-            this.map.addControl(new PositionControl());
-            this.map.addEventListener(MapMouseEvent.CLICK, onMapClick);
-        }
-
+        
       ]]>
     </mx:Script>
 
@@ -459,7 +417,7 @@
                                 <mx:DataGridColumn id="whoCol"
                                                    dataField="who"
                                                    headerText="Name"
-                                                   width="80" />
+                                                   width="80"/>
                                 <mx:DataGridColumn id="whenCol"
                                                    dataField="when"
                                                    headerText="Date"
@@ -477,7 +435,7 @@
                                             <mx:Box width="100%" height="100%" horizontalAlign="center"
                                                     verticalAlign="middle">
                                                 <mx:Button label="Map" width="100%">
-                                                    <mx:click>outerDocument.displayOnMap(data.vertices);</mx:click>
+                                                    <mx:click>outerDocument.mapHelper.displayOnMap(data.vertices);</mx:click>
                                                 </mx:Button>
                                             </mx:Box>
                                         </mx:Component>
@@ -496,12 +454,13 @@
                 <mx:ToggleButtonBar
                         borderStyle="solid"
                         horizontalGap="5"
-                        itemClick="handleMapButtonBarClick(event);"
+                        itemClick="mapHelper.handleMapButtonBarClick(event);"
                         toggleOnClick="true"
                         selectedIndex="-1">
 
                     <mx:dataProvider>
                         <mx:String>Full Extent</mx:String>
+                        <mx:String>Clear Markers</mx:String>
                         <mx:String>Place Marker</mx:String>
                     </mx:dataProvider>
 

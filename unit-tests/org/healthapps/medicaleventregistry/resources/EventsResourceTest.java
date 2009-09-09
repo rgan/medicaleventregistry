@@ -22,6 +22,7 @@ public class EventsResourceTest extends ResourceTestCase {
 
     public void setUp() throws Exception {
         super.setUp();
+        eventType = createEventType("test");
         resource = new EventsResource();
         createdBy = new User("test", "test", "test@f.com");
         dao.store(createdBy);
@@ -33,11 +34,10 @@ public class EventsResourceTest extends ResourceTestCase {
         eventType = createEventType("test");
     }
 
-    public void testShouldGetSearchResults() throws IOException {
+    public void testShouldGetSearchResultsWithDetailsForLoggedInUser() throws IOException {
         final String name = "test";
         final double lat = 2.1;
         final double lon = 2.2;
-        final MedicalEventType eventType = createEventType("test");
         Calendar calendar = Calendar.getInstance();
         calendar.set(2009, 1, 1);
         final Date reportedDate = calendar.getTime();
@@ -53,6 +53,30 @@ public class EventsResourceTest extends ResourceTestCase {
         final Representation representation = resource.search();
         assertEquals(Status.SUCCESS_OK, response.getStatus());
         assertEquals("[{\"eventType\":\"test\",\"vertices\":[{\"lat\":2.1,\"lon\":2.2}],\"when\":\"02/01/2009\",\"who\":\"test\"}]", representation.getText());
+    }
+
+    public void testShouldGetSearchResultsWithSummaryForDataCreatedByDifferentUser() throws IOException {
+        final String name = "test";
+        final double lat = 2.1;
+        final double lon = 2.2;
+
+        User differentUser = new User("different", "test", "different@f.com");
+        dao.store(differentUser);
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(2009, 1, 1);
+        final Date reportedDate = calendar.getTime();
+        MedicalEvent event = new MedicalEvent(name, reportedDate, lat, lon, eventType, differentUser);
+        dao.store(event);
+
+        Map<String, Object> attributes = new HashMap<String, Object>();
+        attributes.put("fromDate", "01/01/2001");
+        attributes.put("toDate", "01/01/2010");
+        attributes.put("typeId", eventType.getId().toString());
+        request.setAttributes(attributes);
+        resource.init(new Context(), request, response);
+        final Representation representation = resource.search();
+        assertEquals(Status.SUCCESS_OK, response.getStatus());
+        assertEquals("[{\"eventType\":\"test\",\"vertices\":[{\"lat\":3,\"lon\":3},{\"lat\":3,\"lon\":2},{\"lat\":2,\"lon\":2},{\"lat\":2,\"lon\":3},{\"lat\":3,\"lon\":3}],\"when\":\"02/01/2009\",\"who\":\"\"}]", representation.getText());
     }
 
 }

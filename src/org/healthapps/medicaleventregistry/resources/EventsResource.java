@@ -39,7 +39,7 @@ public class EventsResource extends GuardedResource {
                 if (event.getCreatedById().equals(userId)) {
                     adaptedEvents.add(new MedicalEventAdaptor(event, dao));
                 } else {
-                    adaptedEvents.add(new MedicalEventAdaptor(event, dao));
+                    adaptedEvents.add(new MedicalEventSummaryAdaptor(event, dao));
                 }
             }
             return new StringRepresentation(JsonUtils.toJsonArray(adaptedEvents));
