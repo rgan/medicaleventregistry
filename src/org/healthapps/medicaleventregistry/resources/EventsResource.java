@@ -50,8 +50,4 @@ public class EventsResource extends GuardedResource {
         }
     }
 
-    private String getAttributeValue(String key) {
-        return URLDecoder.decode((String) getRequest()
-                .getAttributes().get(key));
-    }
 }

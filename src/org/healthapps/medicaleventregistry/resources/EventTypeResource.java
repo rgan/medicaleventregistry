@@ -23,8 +23,7 @@ public class EventTypeResource extends BaseResource {
 
     @Override
     protected void doInit() throws ResourceException {
-        eventTypeName = (String) getRequest()
-                .getAttributes().get("typeName");
+        eventTypeName = getAttributeValue("typeName");
         eventType = dao.findEventTypeByName(eventTypeName);
         setExists(eventType != null);
     }

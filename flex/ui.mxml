@@ -7,7 +7,8 @@
     <mx:Script>
             <![CDATA[
         import com.google.maps.MapMouseEvent;
-import mx.controls.Alert;
+
+        import mx.controls.Alert;
         import mx.rpc.events.ResultEvent;
         import mx.rpc.events.FaultEvent;
         import mx.collections.ArrayCollection;
@@ -22,11 +23,14 @@ import mx.controls.Alert;
 
         import mx.utils.Base64Encoder;
         import mx.rpc.http.mxml.HTTPService;
+
         import org.healthapps.map.MapHelper;
+        import org.healthapps.medicaleventregistry.ValidateHelper;
 
         private var user:String;
         private var pwd:String;
         public var mapHelper:MapHelper;
+        private var validator:ValidateHelper = new ValidateHelper();
 
         private function addAuthHeader(service:HTTPService):void {
             var encoder:Base64Encoder = new Base64Encoder();
@@ -36,28 +40,45 @@ import mx.controls.Alert;
             service.headers = {Authorization:"Basic " + encoder.toString()};
         }
 
-		public function onMapReady(event:Event):void {
-		    mapHelper = new MapHelper(map);
-		    this.map.addEventListener(MapMouseEvent.CLICK, onMapClick);
-		}
-		
+        public function onMapReady(event:Event):void {
+            mapHelper = new MapHelper(map);
+            this.map.addEventListener(MapMouseEvent.CLICK, onMapClick);
+        }
+
         public function onMapClick(event:MapMouseEvent):void {
             mapHelper.populateFieldsAndDrawMarker(event.latLng, lat, lon);
         }
 
         private function addNewEventType():void {
-            addAuthHeader(eventServiceAdd);
-            eventTypeServiceAdd.send();
+            var msg:String = validator.validateAddEventTypeInputs(typeName.text);
+            if (msg == '') {
+                CursorManager.setBusyCursor();
+                eventTypeServiceAdd.send();
+            } else {
+                Alert.show(msg);
+            }
         }
 
         private function addMedicalEvent():void {
-            addAuthHeader(eventServiceAdd);
-            eventServiceAdd.send();
+            var msg:String = validator.validateEventInputs(who.text, lat.text, lon.text, dateFieldEntry.text, eventTypeCombo.selectedIndex);
+            if (msg == '') {
+                CursorManager.setBusyCursor();
+                addAuthHeader(eventServiceAdd);
+                eventServiceAdd.send();
+            } else {
+                Alert.show(msg);
+            }
+
         }
 
         private function addUser():void {
-            CursorManager.setBusyCursor();
-            userService.send();
+            var msg:String = validator.validateRegisterInputs(register_username.text, register_password.text, register_email.text);
+            if (msg == '') {
+                CursorManager.setBusyCursor();
+                userService.send();
+            } else {
+                Alert.show(msg);
+            }
         }
 
         private function logout():void {
@@ -106,16 +127,28 @@ import mx.controls.Alert;
         }
 
         private function loginUser():void {
-            CursorManager.setBusyCursor();
-            authService.send();
+            var msg:String = validator.validateLoginInputs(username.text, password.text);
+            if (msg == '') {
+                CursorManager.setBusyCursor();
+                authService.send();
+            } else {
+                Alert.show(msg);
+            }
+
         }
 
         private function doSearch():void {
-            CursorManager.setBusyCursor();
-            eventsSearchService.url = "rest/events/" + searchEventType.selectedItem.data
-                    + "/" + encodeURIComponent(dateFrom.text) + "/" + encodeURIComponent(dateTo.text);
-            addAuthHeader(eventsSearchService);
-            eventsSearchService.send();
+            var msg:String = validator.validateSearchInputs(dateFrom.text, dateTo.text, searchEventType.selectedIndex);
+            if (msg == '') {
+                CursorManager.setBusyCursor();
+                eventsSearchService.url = "rest/events/" + searchEventType.selectedItem.data
+                        + "/" + encodeURIComponent(dateFrom.text) + "/" + encodeURIComponent(dateTo.text);
+                addAuthHeader(eventsSearchService);
+                eventsSearchService.send();
+            } else {
+                Alert.show(msg);
+            }
+
         }
 
         private function showSearchResults(event:ResultEvent):void
@@ -139,12 +172,12 @@ import mx.controls.Alert;
                 dateFieldEntry.text = "";
                 eventTypeCombo.selectedIndex = -1;
                 who.text = "";
-
             }
         }
 
         private function handleEventServiceAddResult(event:ResultEvent):void
         {
+            CursorManager.removeBusyCursor();
             clearEventForm();
         }
 
@@ -171,8 +204,9 @@ import mx.controls.Alert;
             eventTypeService.send();
         }
 
-        private function updateEventTypesCache(event:ResultEvent):void
+        private function handleAddEventTypeResult(event:ResultEvent):void
         {
+            CursorManager.removeBusyCursor();
             initEventTypesCombos();
         }
 
@@ -206,7 +240,7 @@ import mx.controls.Alert;
                     method="POST"
                     resultFormat="text"
                     fault="showError(event)"
-                    result="updateEventTypesCache(event)">
+                    result="handleAddEventTypeResult(event)">
         <mx:request xmlns="">
             <name>{typeName.text}</name>
         </mx:request>
@@ -301,7 +335,7 @@ import mx.controls.Alert;
 
                         </mx:Form>
                         <mx:Label text="If you don't have a login, register below." fontWeight="bold"/>
-                        <mx:Form>
+                        <mx:Form id="registerForm">
 
                             <mx:FormHeading label="Register"/>
 

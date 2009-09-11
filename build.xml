@@ -156,6 +156,19 @@
         </copy>
     </target>
 
+    <target name="compile-flex-tests">
+        <taskdef classpath="${FLEX_HOME}/ant/lib/flextasks.jar" resource="flexTasks.tasks"/>
+        <mxmlc file="flex/unit-tests/TestRunner.mxml">
+            <compiler.strict>true</compiler.strict>
+            <source-path path-element="flex/unit-tests"/>
+            <source-path path-element="flex/src"/>
+            <compiler.include-libraries dir="flex/lib" append="true">
+                <include name="FlexUnit1Lib.swc"/>
+            </compiler.include-libraries>
+
+        </mxmlc>
+    </target>
+
     <target name="runserver" depends="datanucleusenhance,compile-flex"
             description="Starts the development server.">
         <dev_appserver war="war">
