@@ -118,6 +118,11 @@ public class SearchPanel extends DecoratorPanel {
     }
 
     private void doSearch() {
+        for (int row = 0; row < MAX_ROWS; ++row) {
+            reportGrid.setText(row, 0, "");
+            reportGrid.setText(row, 1, "");
+            reportGrid.setText(row, 2, "");
+        }
         if (!validate()) {
             return;
         }
@@ -138,7 +143,8 @@ public class SearchPanel extends DecoratorPanel {
                 reportGrid.setText(0, 2, "Type");
                 for (int row = 1; row < MAX_ROWS; ++row) {
                     JSONObject eventData = resultsArray.get(row).isObject();
-                    reportGrid.setText(row, 0, eventData.get("who").isString().stringValue());
+                    JSONValue whoValue = eventData.get("who");
+                    reportGrid.setText(row, 0, whoValue.isString().stringValue());
                     reportGrid.setText(row, 1, eventData.get("when").isString().stringValue());
                     reportGrid.setText(row, 2, eventData.get("eventType").isString().stringValue());
                 }
