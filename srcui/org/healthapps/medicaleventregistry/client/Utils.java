@@ -10,9 +10,8 @@ public class Utils {
         eventTypeDropBox.clear();
         for (int i = 0; i < eventTypesArray.size(); i++) {
             JSONObject jsonValue = eventTypesArray.get(i).isObject();
-            eventTypeDropBox.addItem(jsonValue.get("label").toString(),
+            eventTypeDropBox.addItem(jsonValue.get("label").isString().stringValue(),
                     jsonValue.get("data").toString());
         }
     }
-
 }
