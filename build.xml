@@ -14,6 +14,12 @@
         </fileset>
     </path>
 
+    <path id="gwtui.classpath">
+        <pathelement location="lib/gwt-user.jar"/>
+        <pathelement location="lib/gwt-maps.jar"/>
+        <fileset dir="${gwt.sdk}" includes="gwt-dev*.jar"/>
+    </path>
+
     <path id="test.classpath">
         <pathelement path="${build.dir}/test-classes"/>
         <pathelement path="${build.dir}/functional-test-classes"/>
@@ -169,7 +175,49 @@
         </mxmlc>
     </target>
 
-    <target name="runserver" depends="datanucleusenhance,compile-flex"
+    <target name="compile-ui" description="Compile java source">
+        <mkdir dir="war/WEB-INF/classes"/>
+        <javac srcdir="srcui" includes="**" encoding="utf-8"
+               destdir="war/WEB-INF/classes"
+               source="1.5" target="1.5" nowarn="true"
+               debug="true" debuglevel="lines,vars,source">
+            <classpath refid="gwtui.classpath"/>
+        </javac>
+        <copy todir="war/WEB-INF/classes">
+            <fileset dir="srcui" excludes="**/*.java"/>
+        </copy>
+    </target>
+
+    <target name="gwtc" depends="compile-ui" description="GWT compile to JavaScript">
+        <java failonerror="true" fork="true" classname="com.google.gwt.dev.Compiler">
+            <classpath>
+                <pathelement location="srcui"/>
+                <path refid="gwtui.classpath"/>
+            </classpath>
+            <!-- add jvmarg -Xss16M or similar if you see a StackOverflowError -->
+            <jvmarg value="-Xmx256M"/>
+            <jvmarg value="-XstartOnFirstThread"/>
+            <!-- Additional arguments like -style PRETTY or -logLevel DEBUG -->
+            <arg value="org.healthapps.medicaleventregistry.MedicalEventRegistryUI"/>
+        </java>
+    </target>
+
+    <target name="hosted" depends="compile-ui" description="Run hosted mode">
+        <java failonerror="true" fork="true" classname="com.google.gwt.dev.HostedMode">
+            <classpath>
+                <pathelement location="srcui"/>
+                <path refid="gwtui.classpath"/>
+            </classpath>
+            <jvmarg value="-Xmx256M"/>
+            <jvmarg value="-XstartOnFirstThread"/>
+            <arg value="-startupUrl"/>
+            <arg value="MedicalEventRegistryUI.html"/>
+            <!-- Additional arguments like -style PRETTY or -logLevel DEBUG -->
+            <arg value="org.healthapps.medicaleventregistry.MedicalEventRegistryUI"/>
+        </java>
+    </target>
+
+    <target name="runserver" depends="datanucleusenhance,gwtc"
             description="Starts the development server.">
         <dev_appserver war="war">
         </dev_appserver>

@@ -302,6 +302,8 @@
                 text="Global Sapiensis"
                 fontFamily="Verdana" fontWeight="bold" fontSize="12"
                 />
+        <mx:Label id="note" text="[Demo application. Do not enter real data.]"
+                fontFamily="Arial" color="0xFF0000" fontSize="11"/>        
         <mx:Spacer width="100%"/>
         <mx:Label id="loggedIn" text=""/>
         <mx:Button label="Log out" click="logout()"/>

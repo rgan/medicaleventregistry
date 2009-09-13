@@ -4,7 +4,12 @@
 
     <static-files>
         <include path="/*.htm"/>
+        <include path="/*.html"/>
         <include path="/*.swf"/>
+        <include path="/medicaleventregistryui/*.*"/>
+        <include path="/medicaleventregistryui/gwt/standard/*.css"/>
+        <include path="/medicaleventregistryui/gwt/standard/images/*.png"/>
+        <include path="/*.js"/>
     </static-files>
 
     <resource-files/>
